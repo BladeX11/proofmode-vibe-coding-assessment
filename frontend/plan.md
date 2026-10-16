@@ -31,14 +31,14 @@ Build a polished, responsive frontend prototype for the IM-01 ProofMode hackatho
 
 ## Project structure
 
-- `client/src/App.tsx` — route map, shared shell, and screen-level composition.
-- `client/src/pages/` — landing, orientation, assessment, patch-review, results, and reviewer screens.
-- `client/src/components/proofmode/` — shared ProofMode navigation, controls, panels, code/evidence widgets, and dialogs.
-- `client/src/components/proofmode/HeroScene.tsx` — lazy-loaded R3F hero scene with a static fallback.
-- `client/src/contexts/DemoContext.tsx` — typed task, assistant, patch, test, result, and evidence seed data plus browser-session demo state and actions.
-- `client/src/index.css` — reusable color/type/space/border/motion tokens, global accessibility styles, and responsive cyberpunk visual system.
-- `client/public/manus-routes.json` — synchronized static declaration for all six application routes.
-- `client/public/proofmode-logo.svg` and `app.config.ts` — custom product mark and platform project-logo metadata.
+- `src/App.tsx` — route map, shared shell, and screen-level composition.
+- `src/pages/` — landing, orientation, assessment, patch-review, results, and reviewer screens.
+- `src/components/proofmode/` — shared ProofMode navigation, controls, panels, code/evidence widgets, and dialogs.
+- `src/components/proofmode/HeroScene.tsx` — lazy-loaded R3F hero scene with a static fallback.
+- `src/contexts/DemoContext.tsx` — typed task, assistant, patch, test, result, and evidence seed data plus browser-session demo state and actions.
+- `src/index.css` — reusable color/type/space/border/motion tokens, global accessibility styles, and responsive cyberpunk visual system.
+- `public/manus-routes.json` — synchronized static declaration for all six application routes.
+- `public/proofmode-logo.svg` and `app.config.ts` — custom product mark and platform project-logo metadata.
 - `plan.md` — this agreed implementation and design plan.
 - `TODO.md` — outcome-based requirements and delivery status, written after approval.
 

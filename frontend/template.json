@@ -12,10 +12,10 @@
     "drizzle/schema.ts",
     "server/db.ts",
     "server/routers.ts",
-    "client/index.html",
-    "client/src/App.tsx",
-    "client/src/lib/trpc.ts",
-    "client/src/pages/Home.tsx",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/lib/trpc.ts",
+    "frontend/src/pages/Home.tsx",
     "server/auth.logout.test.ts"
   ],
   "source": {

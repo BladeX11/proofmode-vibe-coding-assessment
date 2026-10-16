@@ -36,4 +36,4 @@
 
 - There are six connected screens: landing page, candidate welcome and orientation, coding assessment workspace, AI patch review state, candidate results and next practice, and recruiter evidence report. All screens work with seeded sample data and realistic UI states without an external backend. A simple, visible fallback appears if a model or 3D asset is unavailable.
 - The prototype does not include face monitoring, emotion detection, biometric tracking, AI cheating accusations, or automatic candidate ranking. Recruiters review evidence; the product does not make hiring decisions.
-- `client/public/manus-routes.json` lists the actual application routes and stays synchronized with the source route set.
+- `public/manus-routes.json` lists the actual application routes and stays synchronized with the source route set.
