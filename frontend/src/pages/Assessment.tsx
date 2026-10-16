@@ -6,7 +6,7 @@ import { useDemo, type AssistantMode } from "@/contexts/DemoContext";
 
 const modes: AssistantMode[] = ["Explain", "Plan", "Suggest code", "Explain a change", "Suggest a test"];
 export default function Assessment() {
-  const { code, setCode, ask, messages, patch, tests, runTests, submit } = useDemo();
+  const { code, setCode, ask, messages, patch, tests, executionResult, runningTests, runTests, submit } = useDemo();
   const [mode, setMode] = useState<AssistantMode>("Explain");
   const [prompt, setPrompt] = useState("");
   const [elapsed, setElapsed] = useState(0);
@@ -21,7 +21,54 @@ export default function Assessment() {
       <aside className="task-sidebar"><div className="sidebar-heading"><Eyebrow>TASK / TS-014</Eyebrow><span>01 <i>/</i> 01</span></div><h1>Make time human-readable.</h1><p className="task-description">Implement <code>formatDuration(seconds)</code> for a compact activity feed.</p><div className="task-rule" /><h2>Acceptance criteria</h2><ul className="criterion-list"><li><Check size={13} /> Under a minute → whole seconds</li><li><Check size={13} /> Whole minutes → no remainder</li><li><Check size={13} /> Longer durations → include seconds</li><li><Check size={13} /> Negative input → treat as zero</li></ul><div className="task-hint"><CircleHelp size={15} /><p>Try values around the 60-second boundary. One second can change the output.</p></div><div className="sidebar-tools"><Eyebrow>AVAILABLE TOOLS</Eyebrow><span><Bot size={14} /> ProofMode AI assistant</span><span><Terminal size={14} /> Local test runner</span></div><div className="task-progress"><span>Progress</span><strong>Task 01 <i>of</i> 01</strong><div><span style={{ width: tests === "passed" ? "100%" : "46%" }} /></div></div></aside>
       <section className="editor-column"><div className="editor-toolbar"><div className="file-tab"><FileCode2 size={14} /><span>formatDuration.ts</span><i className="file-unsaved" title="Local draft" /></div><div className="editor-toolbar-right"><span>TypeScript</span><button className="icon-button subtle-icon" aria-label="Version history"><History size={15} /></button></div></div><div className="editor-note"><Code2 size={14} /><span>Your code stays yours. AI changes only appear as a reviewable diff.</span></div><div className="editor-area"><div className="line-numbers" aria-hidden="true">{Array.from({ length: Math.max(6, code.split("\n").length) }, (_, i) => <span key={i}>{String(i + 1).padStart(2, "0")}</span>)}</div><label className="sr-only" htmlFor="candidate-code">Your TypeScript implementation</label><textarea id="candidate-code" spellCheck={false} value={code} onChange={(e) => setCode(e.target.value)} aria-describedby="editor-help" /><span id="editor-help" className="sr-only">Edit the code, or review the AI patch before applying a change.</span></div>
         <div className="editor-footer"><span><span className="footer-signal" /> LOCAL DRAFT</span><span>UTF-8 <i>·</i> LF <i>·</i> TypeScript</span></div>
-        <section className="terminal-panel"><div className="terminal-head"><div><Terminal size={14} /><b>TEST OUTPUT</b><span className="terminal-tab">formatDuration.test.ts</span></div><ActionButton variant="quiet" onClick={runTests}><Play size={13} /> Run tests</ActionButton></div><div className="terminal-output" aria-live="polite">{tests === "not-run" ? <><span className="terminal-prompt">$</span> <span className="terminal-muted">Ready. Run tests to check the boundary cases.</span><br/><span className="terminal-muted">Expected: 0, 59, 60, 125 seconds</span></> : tests === "passed" ? <><span className="terminal-pass">✓ 4 tests passed</span><br/><span className="terminal-muted">0 sec · 59 sec · 1 min · 2 min 5 sec</span></> : <><span className="terminal-fail">× Boundary check failed</span><br/><span className="terminal-muted">59 seconds rounded up to 1 minute. Check floor() vs. round().</span></>}</div></section>
+        <section className="terminal-panel"><div className="terminal-head"><div><Terminal size={14} /><b>TEST OUTPUT</b><span className="terminal-tab">formatDuration.test.ts</span></div><ActionButton variant="quiet" onClick={() => { void runTests(); }} disabled={runningTests}><Play size={13} /> {runningTests ? "Running tests…" : "Run tests"}</ActionButton></div><div className="terminal-output" aria-live="polite">
+          {runningTests ? (
+            <>
+              <span className="terminal-prompt">$</span>{" "}
+              <span className="terminal-muted">Running isolated tests…</span>
+            </>
+          ) : !executionResult ? (
+            <>
+              <span className="terminal-prompt">$</span>{" "}
+              <span className="terminal-muted">Ready. Run tests to check the boundary cases.</span>
+              <br />
+              <span className="terminal-muted">Expected: 0, 59, 60, 125, and -5 seconds</span>
+            </>
+          ) : (
+            <>
+              <span className={executionResult.status === "passed" ? "terminal-pass" : "terminal-fail"}>
+                {executionResult.status === "passed"
+                  ? `✓ ${executionResult.passed}/${executionResult.total} tests passed`
+                  : executionResult.status === "timeout"
+                    ? "× Execution timed out"
+                    : executionResult.status === "error"
+                      ? "× Execution error"
+                      : `× ${executionResult.passed}/${executionResult.total} tests passed`}
+              </span>
+              <br />
+              <span className="terminal-muted">Execution time: {executionResult.durationMs} ms</span>
+              {executionResult.message && (
+                <>
+                  <br />
+                  <span className="terminal-muted">{executionResult.message}</span>
+                </>
+              )}
+              {executionResult.cases.map((item) => (
+                <div key={`${item.input}-${item.expected}`}>
+                  <span className={item.passed ? "terminal-pass" : "terminal-fail"}>
+                    {item.passed ? "✓" : "×"}
+                  </span>{" "}
+                  <span className="terminal-muted">
+                    {item.input}s · expected {JSON.stringify(item.expected)} · actual{" "}
+                    {item.actual === undefined ? "no output" : JSON.stringify(item.actual)}
+                    {item.error ? ` · ${item.error}` : ""}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </section>
       </section>
       <aside className="assistant-column"><div className="assistant-head"><div className="assistant-avatar"><WandSparkles size={17} /></div><div><b>ProofMode assistant</b><small>Demo response · no external model</small></div><span className="assistant-online" /></div><div className="assistant-mode-label"><Eyebrow color="cyan">CHOOSE A MODE</Eyebrow></div><div className="mode-list">{modes.map((item) => <button key={item} className={`mode-pill${mode === item ? " active" : ""}`} onClick={() => setMode(item)} type="button">{item}</button>)}</div><div className="assistant-thread" aria-live="polite">
         <div className="assistant-message"><span className="assistant-message-mark"><Sparkles size={13} /></span><div><p>Let’s make this helper clear at the edges. What would you like to explore?</p><small>PROOFMODE / SYSTEM</small></div></div>
