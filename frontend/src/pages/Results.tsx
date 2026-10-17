@@ -2,15 +2,72 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { ArrowRight, ArrowUpRight, Check, CircleHelp, FileText, Sparkles, Target, Trophy } from "lucide-react";
 import { ActionButton, Eyebrow, EvidenceDialog, EvidenceLink, Panel, StatusBadge } from "@/components/proofmode/ui";
-import { useDemo, type EvidenceItem } from "@/contexts/DemoContext";
+import { trpc } from "@/lib/trpc";
+import { useDemo, type EvidenceItem, type ExecutionResult } from "@/contexts/DemoContext";
 
 export default function Results() {
-  const { note, setNote, evidence, executionResult, patch, submitted } = useDemo();
+  const {
+    note,
+    setNote,
+    evidence,
+    executionResult: localExecutionResult,
+    patch,
+    submitted,
+    assessmentSession,
+  } = useDemo();
+
   const [activeEvidence, setActiveEvidence] = useState<EvidenceItem | null>(null);
   const [saved, setSaved] = useState(false);
-  const verifiedEvidence = executionResult ? evidence.filter((item) => item.id === "EV-03") : [];
+
+  const reportQuery = trpc.assessment.getSessionReport.useQuery(
+    assessmentSession ?? { sessionId: "", accessToken: "" },
+    { enabled: Boolean(assessmentSession), retry: false },
+  );
+
+  const persistedExecution = reportQuery.data?.execution;
+
+  const persistedExecutionResult: ExecutionResult | null = persistedExecution
+    ? {
+        status: persistedExecution.status,
+        passed: persistedExecution.passed,
+        total: persistedExecution.total,
+        durationMs: persistedExecution.durationMs,
+        message: persistedExecution.message,
+        cases: persistedExecution.cases.map((item) => ({
+          input: item.input,
+          expected: item.expected,
+          actual: item.actual,
+          passed: item.passed,
+          error: item.error,
+        })),
+      }
+    : null;
+
+  // Prefer persisted server data once it has loaded.
+  const executionResult = reportQuery.data
+    ? persistedExecutionResult
+    : localExecutionResult;
+
+  const persistedEvidence: EvidenceItem | null = persistedExecution
+    ? {
+        id: "EV-03",
+        title: persistedExecution.status === "error"
+          ? "Sandbox execution error"
+          : "Persisted sandbox test run",
+        kind: "test",
+        detail: `${persistedExecution.passed}/${persistedExecution.total} tests passed in ${persistedExecution.durationMs} ms. ${persistedExecution.cases.map((item) => `${item.input}s: expected ${JSON.stringify(item.expected)}, actual ${item.actual === undefined ? "no output" : JSON.stringify(item.actual)} — ${item.passed ? "PASS" : "FAIL"}${item.error ? ` (${item.error})` : ""}`).join("; ") || "No per-case results returned."}${persistedExecution.message ? ` Message: ${persistedExecution.message}` : ""}`,
+      }
+    : null;
+
+  const verifiedEvidence = reportQuery.data
+    ? persistedEvidence ? [persistedEvidence] : []
+    : localExecutionResult
+      ? evidence.filter((item) => item.id === "EV-03")
+      : [];
   return <main className="app-page page-shell results-page">
     <div className="results-top"><Link href="/assessment" className="back-link">← Back to task</Link><StatusBadge tone="cyan">CANDIDATE VIEW</StatusBadge></div>
+    {reportQuery.data && <p className="report-source" role="status">Report loaded from saved session · {reportQuery.data.session.status}</p>}
+    {assessmentSession && reportQuery.isError && <p className="report-load-error" role="alert">The saved report could not be loaded from the server. Showing the current browser session data instead.</p>}
     <header className="results-hero"><div className="results-icon"><Trophy size={21} /></div><div><Eyebrow>ASSESSMENT COMPLETE / TS-014</Eyebrow><h1>Your process showed.</h1><p>{submitted ? "You finished this task and can review the signals you made visible." : "Here’s a seeded preview of the feedback this task can produce."} One task is a starting point—not a verdict.</p></div><div className="result-outcome">
         <span>EXECUTION OUTCOME</span>
         <strong className={executionResult?.status === "passed" ? "outcome-pass" : "outcome-seeded"}>

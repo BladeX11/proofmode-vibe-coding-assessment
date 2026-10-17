@@ -33,5 +33,5 @@ function Router() {
   </Switch>;
 }
 export default function App() {
-  return <ErrorBoundary><ThemeProvider defaultTheme="dark"><TooltipProvider><Toaster /><DemoProvider><Router /></DemoProvider></TooltipProvider></ThemeProvider></ErrorBoundary>;
+  return <ErrorBoundary><ThemeProvider defaultTheme="light"><TooltipProvider><Toaster /><DemoProvider><Router /></DemoProvider></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }

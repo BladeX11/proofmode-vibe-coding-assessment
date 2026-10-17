@@ -20,6 +20,11 @@ export interface ExecutionResult {
   durationMs: number;
   message?: string;
 }
+interface AssessmentSessionCredentials {
+  sessionId: string;
+  accessToken: string;
+}
+
 export type AssistantMode = "Explain" | "Plan" | "Suggest code" | "Explain a change" | "Suggest a test";
 
 export const starterCode = `export function formatDuration(seconds: number): string {\n  // TODO: format a duration for the activity feed\n  return "";\n}`;
@@ -30,6 +35,7 @@ export interface EvidenceItem { id: string; title: string; kind: "prompt" | "dif
 interface Message { role: "candidate" | "assistant"; text: string }
 interface DemoState {
   code: string;
+  assessmentSession: AssessmentSessionCredentials | null;
   patch: PatchState;
   tests: TestState;
   executionResult: ExecutionResult | null;
@@ -46,7 +52,7 @@ interface DemoContextValue extends DemoState {
   rejectPatch: () => void;
   applyPatch: () => void;
   runTests: () => Promise<void>;
-  submit: () => void;
+  submit: () => Promise<void>;
   reset: () => void;
 }
 
@@ -56,7 +62,7 @@ const baseEvidence: EvidenceItem[] = [
   { id: "EV-03", title: "Boundary test run", kind: "test", detail: "No test execution recorded yet. Results will appear here after the candidate runs the sandbox tests." },
   { id: "EV-04", title: "Candidate explanation", kind: "explanation", detail: "“Rounding crosses the minute boundary too early. I used floor for whole minutes and kept the remainder for the seconds.”" },
 ];
-const freshState = (): DemoState => ({ code: starterCode, patch: "idle", tests: "not-run", executionResult: null, runningTests: false, submitted: false, note: "", messages: [], evidence: baseEvidence });
+const freshState = (): DemoState => ({ code: starterCode, assessmentSession: null, patch: "idle", tests: "not-run", executionResult: null, runningTests: false, submitted: false, note: "", messages: [], evidence: baseEvidence });
 const storageKey = "proofmode-demo-v2";
 function loadState(): DemoState {
   try {
@@ -68,7 +74,10 @@ function loadState(): DemoState {
 
 const DemoContext = createContext<DemoContextValue | null>(null);
 export function DemoProvider({ children }: { children: ReactNode }) {
-  const { mutateAsync: executeTests } = trpc.assessment.runTests.useMutation();
+  const { mutateAsync: startAssessmentSession } = trpc.assessment.startSession.useMutation();
+  const { mutateAsync: saveAssessmentSubmission } = trpc.assessment.saveSubmission.useMutation();
+  const { mutateAsync: executeSavedTests } = trpc.assessment.runSavedSubmission.useMutation();
+  const { mutateAsync: finishAssessmentSession } = trpc.assessment.submitSession.useMutation();
   const runGeneration = useRef(0);
   const [state, setState] = useState<DemoState>(loadState);
   useEffect(() => {
@@ -129,7 +138,36 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       }));
 
       try {
-        const result = await executeTests({ source: submittedCode });
+        let session = state.assessmentSession;
+
+        if (!session) {
+          const created = await startAssessmentSession({
+            assessmentSlug: "format-duration",
+            assessmentVersion: 1,
+          });
+
+          session = {
+            sessionId: created.sessionId,
+            accessToken: created.accessToken,
+          };
+
+          if (runGeneration.current !== runId) return;
+          setState((s) => ({ ...s, assessmentSession: session }));
+        }
+
+        const submission = await saveAssessmentSubmission({
+          sessionId: session.sessionId,
+          accessToken: session.accessToken,
+          sourceCode: submittedCode,
+        });
+
+        if (runGeneration.current !== runId) return;
+
+        const result = await executeSavedTests({
+          sessionId: session.sessionId,
+          submissionId: submission.submissionId,
+          accessToken: session.accessToken,
+        });
 
         // Ignore stale responses if the candidate edited or reset the task.
         if (runGeneration.current !== runId) return;
@@ -190,12 +228,99 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    submit: () => setState((s) => ({ ...s, submitted: true })),
+    submit: async () => {
+      if (state.submitted) return;
+
+      let session = state.assessmentSession;
+      const submittedCode = state.code;
+
+      setState((s) => ({
+        ...s,
+        runningTests: true,
+        executionResult: null,
+        tests: "not-run",
+      }));
+
+      try {
+        if (!session) {
+          const created = await startAssessmentSession({
+            assessmentSlug: "format-duration",
+            assessmentVersion: 1,
+          });
+
+          session = {
+            sessionId: created.sessionId,
+            accessToken: created.accessToken,
+          };
+
+          setState((s) => ({ ...s, assessmentSession: session }));
+        }
+
+        // Persist the exact code snapshot that is being submitted.
+        const submission = await saveAssessmentSubmission({
+          sessionId: session.sessionId,
+          accessToken: session.accessToken,
+          sourceCode: submittedCode,
+        });
+
+        // Execute that saved snapshot, not unsaved browser editor contents.
+        const result = await executeSavedTests({
+          sessionId: session.sessionId,
+          submissionId: submission.submissionId,
+          accessToken: session.accessToken,
+        });
+
+        const caseDetails = result.cases.map((item) => {
+          const actual = item.actual === undefined
+            ? "no output"
+            : JSON.stringify(item.actual);
+          const error = item.error ? ` (${item.error})` : "";
+
+          return `${item.input}s: expected ${JSON.stringify(item.expected)}, actual ${actual} — ${item.passed ? "PASS" : "FAIL"}${error}`;
+        }).join("; ");
+
+        const testEvidence: EvidenceItem = {
+          id: "EV-03",
+          title: result.status === "error"
+            ? "Sandbox execution error"
+            : "Final submission test run",
+          kind: "test",
+          detail: `${result.passed}/${result.total} tests passed in ${result.durationMs} ms. ${caseDetails || "No per-case results returned."}${result.message ? ` Message: ${result.message}` : ""}`,
+        };
+
+        setState((s) => ({
+          ...s,
+          assessmentSession: session,
+          tests: result.status === "passed" ? "passed" : "failed",
+          executionResult: result,
+          runningTests: false,
+          evidence: s.evidence.map((item) =>
+            item.id === "EV-03" ? testEvidence : item
+          ),
+        }));
+
+        // Finalize only after the final submission's execution is persisted.
+        await finishAssessmentSession({
+          sessionId: session.sessionId,
+          accessToken: session.accessToken,
+        });
+
+        setState((s) => ({
+          ...s,
+          assessmentSession: session,
+          submitted: true,
+          runningTests: false,
+        }));
+      } catch (error) {
+        setState((s) => ({ ...s, runningTests: false }));
+        throw error;
+      }
+    },
     reset: () => {
       runGeneration.current += 1;
       setState(freshState());
     },
-  }), [state, executeTests]);
+  }), [state, startAssessmentSession, saveAssessmentSubmission, executeSavedTests, finishAssessmentSession]);
   return <DemoContext.Provider value={actions}>{children}</DemoContext.Provider>;
 }
 export function useDemo() {
