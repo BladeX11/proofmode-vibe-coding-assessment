@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./fonts.css";
-@import "./proofmode.css";
 @import "./design/tokens.css";
 @import "./design/base.css";
 @import "./design/workspace.css";

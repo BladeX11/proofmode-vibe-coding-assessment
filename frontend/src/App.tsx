@@ -16,7 +16,7 @@ const Results = lazy(() => import("@/pages/Results"));
 const Reviewer = lazy(() => import("@/pages/Reviewer"));
 
 function Screen({ children, withNav = true }: { children: ReactNode; withNav?: boolean }) {
-  return <Suspense fallback={<div className="route-loading" role="status"><span /> Loading ProofMode…</div>}>
+  return <Suspense fallback={<div className="pm-route-loading" role="status">Loading ProofMode…</div>}>
     {withNav && <TopNav />}{children}
   </Suspense>;
 }

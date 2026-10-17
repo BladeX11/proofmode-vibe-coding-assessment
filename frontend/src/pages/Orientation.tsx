@@ -1,21 +1,55 @@
 import { Link } from "wouter";
-import { ArrowLeft, ArrowRight, Bot, Check, Clock3, Eye, LockKeyhole, Play, ScanEye, ShieldCheck, TerminalSquare } from "lucide-react";
-import { ActionButton, Eyebrow, Panel, StatusBadge } from "@/components/proofmode/ui";
+import { ArrowLeft, ArrowRight, Clock3, Bot, TerminalSquare } from "lucide-react";
+import { Panel, StatusBadge } from "@/components/proofmode/ui";
 
 export default function Orientation() {
-  return <main className="app-page page-shell orientation-page">
-    <Link className="back-link" href="/"><ArrowLeft size={15} /> Back to ProofMode</Link>
-    <div className="orientation-heading"><div><Eyebrow>ASSESSMENT / CANDIDATE BRIEF</Eyebrow><h1>Before you begin.</h1><p>A few minutes to understand the task, your tools, and what this session captures.</p></div><StatusBadge tone="cyan">ORIENTATION · UNGRADED</StatusBadge></div>
-    <div className="orientation-grid">
-      <section className="orientation-main">
-        <Panel className="task-preview"><div className="panel-topline"><Eyebrow>YOUR TASK</Eyebrow><span className="task-id">TASK / TS-014</span></div><h2>Make time human-readable.</h2><p>Implement a small <code>formatDuration</code> helper for an activity feed. Return clear, concise durations—then tell us how you checked the tricky boundary.</p><div className="acceptance"><h3>ACCEPTANCE CRITERIA</h3><ul><li><Check size={14} /> Values under a minute show whole seconds.</li><li><Check size={14} /> Whole minutes don’t show a seconds remainder.</li><li><Check size={14} /> Longer durations include remaining seconds.</li><li><Check size={14} /> Negative values are treated as zero.</li></ul></div><div className="task-meta"><span><Clock3 size={15} /> 18 minutes</span><span><TerminalSquare size={15} /> TypeScript</span><span><Bot size={15} /> AI assistant allowed</span></div></Panel>
-        <Panel className="tutorial-panel"><div className="panel-topline"><Eyebrow color="cyan">QUICK TOUR</Eyebrow><span className="unscored-label">UNSCORED</span></div><h2>Three things to try.</h2><div className="tutorial-steps"><div><span className="tutorial-icon"><Bot size={17} /></span><div><b>Ask the assistant</b><p>Choose a mode, add context, and get a suggestion.</p></div><span className="tutorial-num">01</span></div><div><span className="tutorial-icon cyan"><ScanEye size={17} /></span><div><b>Review a code diff</b><p>Nothing changes until you explicitly accept it.</p></div><span className="tutorial-num">02</span></div><div><span className="tutorial-icon magenta"><Play size={17} /></span><div><b>Run a test</b><p>Check the edge cases and verify your implementation.</p></div><span className="tutorial-num">03</span></div></div></Panel>
-      </section>
-      <aside className="orientation-aside">
-        <Panel className="session-panel"><Eyebrow>SESSION DETAILS</Eyebrow><h2>Your space.<br/>Your process.</h2><div className="detail-list"><div><span className="detail-icon green"><Check size={15} /></span><span><b>AI is allowed</b><small>Use the built-in assistant as much—or as little—as you like.</small></span></div><div><span className="detail-icon cyan"><Eye size={15} /></span><span><b>What’s recorded</b><small>Prompts, visible code changes, test results, and your explanations.</small></span></div><div><span className="detail-icon muted"><LockKeyhole size={15} /></span><span><b>What stays hidden</b><small>No keystroke logging, screen recording, webcam, or biometrics.</small></span></div></div><div className="privacy-note"><ShieldCheck size={16} /><p>Evidence is limited to this task. A human reviewer—not an algorithm—interprets the report.</p></div></Panel>
-        <div className="orientation-start"><p>Ready when you are. The timer starts after you begin.</p><Link href="/assessment" className="button button-primary full-button">Start assessment <ArrowRight size={16} /></Link><small>By continuing, you acknowledge the session evidence notice above.</small></div>
+  return <main className="pm-page">
+    <div className="pm-topline"><Link className="pm-back" href="/"><ArrowLeft size={15} aria-hidden="true" /> Back to ProofMode</Link><StatusBadge tone="muted">Orientation, not scored</StatusBadge></div>
+    <header className="pm-pagehead">
+      <span className="pm-label">Before you start</span>
+      <h1 className="pm-h1">Read the task, then begin when you’re ready</h1>
+      <p className="pm-prose pm-muted">A few minutes to see the task, your tools, and what this session keeps.</p>
+    </header>
+    <div className="pm-results">
+      <div className="pm-results-main">
+        <Panel>
+          <span className="pm-label">Your task · TS-014</span>
+          <h2 className="pm-h2" style={{ margin: "var(--pm-s1) 0 var(--pm-s3)" }}>Format a duration for an activity feed</h2>
+          <p className="pm-prose" style={{ margin: "0 0 var(--pm-s4)" }}>Write a small <code className="pm-evref">formatDuration</code> helper that returns short, clear durations. Be ready to say how you checked the tricky boundary.</p>
+          <h3 className="pm-label" style={{ margin: "0 0 var(--pm-s2)" }}>Acceptance criteria</h3>
+          <ul className="pm-list" style={{ marginBottom: "var(--pm-s4)" }}>
+            <li>Values under a minute show whole seconds.</li>
+            <li>Whole minutes don’t show a seconds remainder.</li>
+            <li>Longer durations include the remaining seconds.</li>
+            <li>Negative values are treated as zero.</li>
+          </ul>
+          <ul className="pm-facts">
+            <li style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Clock3 size={15} aria-hidden="true" /> 18 minutes</li>
+            <li style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><TerminalSquare size={15} aria-hidden="true" /> TypeScript</li>
+            <li style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><Bot size={15} aria-hidden="true" /> AI assistant allowed</li>
+          </ul>
+        </Panel>
+        <Panel>
+          <span className="pm-label">Quick tour · unscored</span>
+          <h2 className="pm-h2" style={{ margin: "var(--pm-s1) 0 var(--pm-s4)" }}>Three things to try</h2>
+          <ol className="pm-steps">
+            <li><div><b>Ask the assistant</b><p className="pm-muted">Pick a mode, add some context, and read what comes back.</p></div></li>
+            <li><div><b>Review a code diff</b><p className="pm-muted">Nothing changes in your code until you accept it.</p></div></li>
+            <li><div><b>Run the tests</b><p className="pm-muted">Check the edge cases before you decide you’re done.</p></div></li>
+          </ol>
+        </Panel>
+      </div>
+      <aside className="pm-results-aside" aria-label="Session details">
+        <Panel>
+          <h2 className="pm-h3" style={{ marginBottom: "var(--pm-s3)" }}>What to know about this session</h2>
+          <div className="pm-detail"><b>The assistant is allowed</b><p className="pm-muted">Use it as much or as little as you like. In this prototype its replies are scripted and no external model is called.</p></div>
+          <div className="pm-detail"><b>What the session keeps</b><p className="pm-muted">Your prompts and patch decisions stay in this browser tab. Each test run saves your code and its results.</p></div>
+          <div className="pm-detail"><b>What it doesn’t record</b><p className="pm-muted">No keystroke logging, screen recording, webcam or biometrics.</p></div>
+          <p className="pm-micro" style={{ margin: "var(--pm-s3) 0 0" }}>Evidence is limited to this task. A person, not an algorithm, reads the report.</p>
+        </Panel>
+        <Link href="/assessment" className="pm-btn pm-btn-primary">Start the assessment <ArrowRight size={16} aria-hidden="true" /></Link>
+        <p className="pm-micro" style={{ margin: 0 }}>The timer starts when the workspace opens. By continuing you confirm you’ve read what the session keeps.</p>
       </aside>
     </div>
-    <div className="prototype-footer"><span>PROOFMODE / IM—01</span><span>Candidate orientation <i>·</i> 01 of 04</span></div>
   </main>;
 }

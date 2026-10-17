@@ -1,12 +1,4 @@
-/* ProofMode base + primitives. Loaded after the legacy sheet so global rules win while screens migrate.
-   New components use the pm- prefix only. */
-
-/* Transitional: point the legacy font variables at the new faces until proofmode.css is deleted. */
-:root {
-  --sans: var(--pm-font-sans);
-  --display: var(--pm-font-serif);
-  --mono: var(--pm-font-mono);
-}
+/* ProofMode base + primitives. Components use the pm- prefix only. */
 
 html { background: var(--pm-paper); scroll-padding-top: 88px; }
 body {
@@ -25,6 +17,8 @@ body {
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--pm-mark);
 }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.pm-route-loading { display: grid; place-items: center; min-height: 40vh; color: var(--pm-muted); font: var(--pm-text-small); }
 .pm-h-display { font: var(--pm-text-display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
 .pm-h1 { font: var(--pm-text-h1); letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
 .pm-h2 { font: var(--pm-text-h2); margin: 0; }
@@ -32,7 +26,7 @@ body {
 .pm-prose { max-width: var(--pm-measure); text-wrap: pretty; }
 .pm-muted { color: var(--pm-muted); }
 .pm-label { font: var(--pm-text-label); color: var(--pm-muted); }
-.pm-micro { font: var(--pm-text-micro); color: var(--pm-muted); letter-spacing: 0.01em; }
+.pm-micro { font: 400 0.8125rem/1.45 var(--pm-font-sans); color: var(--pm-muted); }
 .pm-num { font-variant-numeric: tabular-nums; }
 .pm-container { width: min(var(--pm-page), calc(100% - 32px)); margin-inline: auto; }
 

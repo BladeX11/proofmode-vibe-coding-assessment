@@ -38,9 +38,6 @@ export function StatusBadge({ children, tone = "green" }: { children: React.Reac
   const { cls, icon: Icon } = BADGE[tone];
   return <span className={`pm-badge ${cls}`}>{Icon && <Icon size={13} aria-hidden="true" />}{children}</span>;
 }
-export function SectionHeading({ label, title, description, tone = "green" }: { label: string; title: string; description?: string; tone?: "green" | "cyan" | "magenta" }) {
-  return <div className="section-heading"><Eyebrow color={tone}>{label}</Eyebrow><h2 className="pm-h2">{title}</h2>{description && <p className="pm-prose pm-muted">{description}</p>}</div>;
-}
 export function EvidenceLink({ item, onOpen, compact = false }: { item: EvidenceItem; onOpen: (item: EvidenceItem) => void; compact?: boolean }) {
   return <button className="pm-evlink" onClick={() => onOpen(item)} type="button"><span className="pm-evref">{item.id}</span><span>{compact ? "View evidence" : item.title}</span><ArrowUpRight size={14} aria-hidden="true" /></button>;
 }

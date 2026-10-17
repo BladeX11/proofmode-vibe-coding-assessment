@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, ArrowUpRight, Check, CircleHelp, FileText, Sparkles, Target, Trophy } from "lucide-react";
-import { ActionButton, Eyebrow, EvidenceDialog, EvidenceLink, Panel, StatusBadge } from "@/components/proofmode/ui";
+import { ArrowLeft, ArrowRight, Check, CircleHelp, X } from "lucide-react";
+import { ActionButton, EvidenceDialog, EvidenceLink, Panel } from "@/components/proofmode/ui";
 import { trpc } from "@/lib/trpc";
 import { useDemo, type EvidenceItem, type ExecutionResult } from "@/contexts/DemoContext";
+
+const STATUS_WORD = { passed: "Passed", failed: "Failed", timeout: "Timed out", error: "Execution error" } as const;
 
 export default function Results() {
   const {
@@ -64,96 +66,89 @@ export default function Results() {
     : localExecutionResult
       ? evidence.filter((item) => item.id === "EV-03")
       : [];
-  return <main className="app-page page-shell results-page">
-    <div className="results-top"><Link href="/assessment" className="back-link">← Back to task</Link><StatusBadge tone="cyan">CANDIDATE VIEW</StatusBadge></div>
-    {reportQuery.data && <p className="report-source" role="status">Report loaded from saved session · {reportQuery.data.session.status}</p>}
-    {assessmentSession && reportQuery.isError && <p className="report-load-error" role="alert">The saved report could not be loaded from the server. Showing the current browser session data instead.</p>}
-    <header className="results-hero"><div className="results-icon"><Trophy size={21} /></div><div><Eyebrow>ASSESSMENT COMPLETE / TS-014</Eyebrow><h1>Your process showed.</h1><p>{submitted ? "You finished this task and can review the signals you made visible." : "Here’s a seeded preview of the feedback this task can produce."} One task is a starting point—not a verdict.</p></div><div className="result-outcome">
-        <span>EXECUTION OUTCOME</span>
-        <strong className={executionResult?.status === "passed" ? "outcome-pass" : "outcome-seeded"}>
-          {!executionResult ? "Not run" :
-            executionResult.status === "passed" ? "Checks passed" :
-            executionResult.status === "failed" ? "Checks failed" :
-            executionResult.status === "timeout" ? "Timed out" : "Execution error"}
-        </strong>
-        <small>{executionResult
-          ? `${executionResult.passed} / ${executionResult.total} cases · ${executionResult.durationMs} ms`
-          : "No verified test results yet"}</small>
-      </div></header>
-    <div className="results-layout"><div className="results-main">
-      <Panel className="result-section">
-        <div className="result-section-head">
-          <div>
-            <Eyebrow color={executionResult?.status === "passed" ? "green" : "cyan"}>
-              {executionResult ? "01 / VERIFIED EXECUTION" : "01 / EXECUTION EVIDENCE"}
-            </Eyebrow>
-            <h2>{!executionResult
-              ? "No execution evidence yet."
-              : executionResult.status === "passed"
-                ? "All defined cases passed."
-                : "Execution needs review."}</h2>
+
+  const didNotFinish = executionResult?.status === "error" || executionResult?.status === "timeout";
+  const headline = !executionResult
+    ? "No test run yet"
+    : didNotFinish
+      ? "The test run did not finish"
+      : executionResult.status === "passed"
+        ? `All ${executionResult.total} checks passed`
+        : `${executionResult.passed} of ${executionResult.total} checks passed`;
+  const patchWord = patch === "rejected" ? "Rejected" : patch === "applied" ? "Applied" : patch === "pending" ? "Awaiting your decision" : null;
+
+  return <main className="pm-page">
+    <div className="pm-topline pm-no-print"><Link href="/assessment" className="pm-back"><ArrowLeft size={15} aria-hidden="true" /> Back to the task</Link><span className="pm-micro">Candidate view</span></div>
+    {reportQuery.data && <p className="pm-micro" role="status">Loaded from your saved session ({reportQuery.data.session.status}).</p>}
+    {assessmentSession && reportQuery.isError && <p className="pm-ws-error" role="alert">The saved report could not be loaded from the server. Showing this browser session instead.</p>}
+    <header className="pm-pagehead">
+      <span className="pm-label">Task TS-014 · formatDuration</span>
+      <h1 className="pm-h1">{submitted ? "Here’s what your session shows" : "A preview of your feedback"}</h1>
+      <p className="pm-prose pm-muted">{submitted ? "You finished the task. These are the signals your work made visible." : "This is the feedback the task can produce once you submit."} One task is a starting point, not a verdict.</p>
+    </header>
+
+    <div className="pm-results">
+      <div className="pm-results-main">
+        <Panel>
+          <span className="pm-label">1 · Your test run</span>
+          <h2 className="pm-h2" style={{ margin: "var(--pm-s1) 0 var(--pm-s3)", color: executionResult?.status === "passed" ? "var(--pm-pass)" : undefined }}>{headline}</h2>
+          {!executionResult && <p className="pm-prose pm-muted" style={{ margin: 0 }}>Nothing counts as passed until the isolated test runner has run your current code.</p>}
+          {didNotFinish && <p className="pm-prose pm-muted" style={{ margin: 0 }}>The sandbox could not complete the run, so no checks were verified. This says nothing about your code. Run the tests again from the workspace.</p>}
+          {executionResult && !didNotFinish && <>
+            <div className="pm-scroll-x"><table className="pm-table">
+              <thead><tr><th scope="col">Input</th><th scope="col">Expected</th><th scope="col">Actual</th><th scope="col">Result</th></tr></thead>
+              <tbody>{executionResult.cases.map((item) => <tr key={`${item.input}-${item.expected}`}>
+                <td className="pm-num"><code>{item.input}s</code></td>
+                <td><code>{JSON.stringify(item.expected)}</code></td>
+                <td><code>{item.actual === undefined ? "no output" : JSON.stringify(item.actual)}</code>{item.error && <div className="pm-micro">{item.error}</div>}</td>
+                <td>{item.passed ? <span className="pm-badge pm-badge-pass"><Check size={13} aria-hidden="true" />Pass</span> : <span className="pm-badge pm-badge-fail"><X size={13} aria-hidden="true" />Fail</span>}</td>
+              </tr>)}</tbody>
+            </table></div>
+            <p className="pm-micro" style={{ margin: "var(--pm-s3) 0 0" }}>These are fixed checks supplied by the system. They don’t show that you wrote the tests. Run time {executionResult.durationMs} ms.</p>
+          </>}
+          {verifiedEvidence[0] && <div style={{ marginTop: "var(--pm-s3)" }}><EvidenceLink item={verifiedEvidence[0]} onOpen={setActiveEvidence} compact /></div>}
+        </Panel>
+
+        <Panel>
+          <span className="pm-label">2 · One thing to practise</span>
+          <h2 className="pm-h2" style={{ margin: "var(--pm-s1) 0 var(--pm-s3)" }}>Make the boundary table-driven</h2>
+          <div className="pm-practice">
+            <p className="pm-micro">Optional · about 8 minutes · the same suggestion for everyone in this demo</p>
+            <p className="pm-prose">Try a few inputs around 60 seconds, including negative and non-integer values. Write down the output you expect before you run each test.</p>
+            <ActionButton variant="secondary" onClick={() => setSaved(!saved)}>{saved ? <><Check size={16} aria-hidden="true" /> Saved to your practice list</> : "Save for later"}</ActionButton>
           </div>
-          <span className={`section-mark ${executionResult?.status === "passed" ? "green-mark" : "cyan-mark"}`}>
-            {executionResult?.status === "passed" ? <Check size={16} /> : <Target size={16} />}
-          </span>
-        </div>
-        {!executionResult ? (
-          <div className="finding-row">
-            <div className="finding-copy">
-              <h3>Awaiting the first run</h3>
-              <p>Nothing is marked as passed until the isolated test runner executes the current source.</p>
-            </div>
-            <div className="skill-chip">NOT RUN</div>
+        </Panel>
+
+        <Panel>
+          <span className="pm-label">3 · What we couldn’t observe</span>
+          <h2 className="pm-h2" style={{ margin: "var(--pm-s1) 0 var(--pm-s3)" }}>Not observed is not zero</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--pm-s3)" }}>
+            <p className="pm-prose" style={{ margin: 0 }}><strong>Working with a team.</strong> This was a solo task, so it gave no fair chance to show it.</p>
+            <span className="pm-na"><CircleHelp size={13} aria-hidden="true" /> Not observed</span>
           </div>
-        ) : (
-          <>
-            <div className="finding-row">
-              <div className="finding-copy">
-                <h3>Actual sandbox outcome</h3>
-                <p>
-                  The sandbox returned {executionResult.passed} passing result(s) out of {executionResult.total}
-                  in {executionResult.durationMs} ms. These are predefined boundary checks, not evidence
-                  that the candidate authored the test cases.
-                </p>
-              </div>
-              <div className={`skill-chip ${executionResult.status === "passed" ? "skill-strong" : ""}`}>
-                {executionResult.status === "passed" ? "ALL PASS" :
-                  executionResult.status === "failed" ? "FAILURES" :
-                  executionResult.status === "timeout" ? "TIMEOUT" : "ERROR"}
-              </div>
-              {verifiedEvidence[0] && (
-                <EvidenceLink item={verifiedEvidence[0]} onOpen={setActiveEvidence} compact />
-              )}
-            </div>
-            <div className="finding-row">
-              <div className="finding-copy">
-                <h3>Per-case results</h3>
-                <p>{executionResult.cases.length
-                  ? executionResult.cases.map((item) =>
-                      `${item.input}s: ${item.passed ? "matched" : "did not match"} expected output`
-                    ).join(" · ")
-                  : executionResult.message || "No per-case output was returned."}</p>
-              </div>
-              <div className="skill-chip">
-                {executionResult.cases.filter((item) => item.passed).length} / {executionResult.total} MATCHED
-              </div>
-            </div>
-          </>
-        )}
-      </Panel>
-      <Panel className="result-section practice-section"><div className="result-section-head"><div><Eyebrow color="cyan">02 / WHAT TO PRACTICE</Eyebrow><h2>One small next step.</h2></div><span className="section-mark cyan-mark"><Target size={16} /></span></div><div className="practice-card"><div className="practice-orb"><Sparkles size={18} /></div><div className="practice-content"><span className="practice-tag">OPTIONAL · 8 MIN</span><h3>Make the boundary table-driven.</h3><p>Try a few inputs around 60 seconds, including negative and non-integer values. Write down the expected output before you run each test.</p><button type="button" className="practice-action" onClick={() => setSaved(!saved)}>{saved ? "Added to your practice list" : "Save for later"} {saved ? <Check size={14} /> : <ArrowUpRight size={14} />}</button></div></div></Panel>
-      <Panel className="result-section not-observed-section"><div className="result-section-head"><div><Eyebrow color="magenta">03 / WHAT WE COULD NOT OBSERVE</Eyebrow><h2>Not observed is not zero.</h2></div><span className="section-mark muted-mark"><CircleHelp size={16} /></span></div><div className="not-observed-row"><div><span className="not-observed-title">Collaboration across a team</span><p>This solo task offered no fair opportunity to observe it.</p></div><span className="not-observed-value">NOT OBSERVED</span></div></Panel>
-      <Panel className="context-panel"><div className="context-title"><FileText size={17} /><div><h2>Your context note</h2><p>Optional. Shared separately from assessed findings.</p></div></div><label className="sr-only" htmlFor="context-note">Add context for the reviewer</label><textarea id="context-note" placeholder="Anything you'd like a human reviewer to know about your approach?" value={note} onChange={(e) => setNote(e.target.value)} /><div className="context-foot"><span>Not included in the skill findings.</span><span>Saved in this demo session</span></div></Panel>
-    </div><aside className="results-aside"><Panel className="skill-summary"><Eyebrow>SKILL SNAPSHOT</Eyebrow><h2>Evidence bands</h2><p>Signals from one task only. Not a hiring score.</p><div className="skill-band"><div><span>Code correctness</span>
-        <b>{executionResult
-          ? executionResult.status === "passed" ? "Passed" :
-            executionResult.status === "failed" ? "Failed" :
-            executionResult.status === "timeout" ? "Timed out" : "Execution error"
-          : "Not run"}</b></div><div className="band-track"><span style={{ width: executionResult && executionResult.total > 0 ? `${(executionResult.passed / executionResult.total) * 100}%` : "0%" }} /></div><small>{executionResult ? `${executionResult.passed} of ${executionResult.total} cases passed · ${executionResult.durationMs} ms` : "No verified test run yet"}</small></div><div className="skill-band cyan-band"><div><span>Patch review action</span>
-        <b>{patch === "rejected" ? "Rejected" :
-          patch === "applied" ? "Applied" :
-          patch === "pending" ? "Awaiting review" : "Not observed"}</b></div><small>{patch === "rejected" || patch === "applied" ? "Action recorded; decision quality is not automatically scored." : "No review decision has been recorded."}</small></div><div className="skill-band muted-band"><div><span>Team collaboration</span><b>Not observed</b></div><small>No fair opportunity in this task.</small></div><div className="score-separator" /><div className="evidence-overview"><span><FileText size={14} /> Evidence records</span><b>{verifiedEvidence.length.toString().padStart(2, "0")} linked</b></div>{verifiedEvidence.map((item) => <EvidenceLink key={item.id} item={item} onOpen={setActiveEvidence} />)}</Panel><div className="results-disclaimer">This report reflects one task and does not determine hiring outcomes.</div><Link href="/reviewer" className="reviewer-link-card"><span><Eyebrow color="cyan">HUMAN REVIEW</Eyebrow><strong>Open reviewer report</strong><small>See what a recruiter can inspect.</small></span><ArrowRight size={17} /></Link></aside></div>
-    <div className="results-footer"><span>PROOFMODE / CANDIDATE FEEDBACK</span><Link href="/reviewer" className="button button-secondary">View reviewer report <ArrowRight size={14} /></Link></div>
+        </Panel>
+
+        <Panel>
+          <h2 className="pm-h3">Your note for the reviewer</h2>
+          <p className="pm-micro" style={{ margin: "var(--pm-s1) 0 var(--pm-s3)" }}>Optional. It’s shown separately from the findings and kept in this browser tab.</p>
+          <label className="sr-only" htmlFor="context-note">Add context for the reviewer</label>
+          <textarea id="context-note" className="pm-field" rows={4} placeholder="Anything you’d like a person reviewing this to know about your approach?" value={note} onChange={(e) => setNote(e.target.value)} />
+        </Panel>
+      </div>
+
+      <aside className="pm-results-aside" aria-label="Summary">
+        <Panel>
+          <h2 className="pm-h3">Summary</h2>
+          <p className="pm-micro" style={{ margin: "var(--pm-s1) 0 var(--pm-s2)" }}>Signals from one task. Not a hiring score.</p>
+          <div className="pm-snap"><span className="pm-label">Code correctness</span><p><strong>{executionResult ? (didNotFinish ? "Not verified" : STATUS_WORD[executionResult.status]) : "Not run"}</strong></p>{executionResult && !didNotFinish && <p className="pm-micro">{executionResult.passed} of {executionResult.total} checks</p>}</div>
+          <div className="pm-snap"><span className="pm-label">Patch review</span>{patchWord ? <p><strong>{patchWord}</strong></p> : <span className="pm-na"><CircleHelp size={13} aria-hidden="true" /> Not observed</span>}{patchWord && <p className="pm-micro">The action is recorded. How well you judged it is not scored.</p>}</div>
+          <div className="pm-snap"><span className="pm-label">Team collaboration</span><span className="pm-na"><CircleHelp size={13} aria-hidden="true" /> Not observed</span></div>
+          <div className="pm-snap"><span className="pm-label">Evidence records</span><p><strong>{verifiedEvidence.length} linked</strong></p>{verifiedEvidence.map((item) => <EvidenceLink key={item.id} item={item} onOpen={setActiveEvidence} />)}</div>
+        </Panel>
+        <p className="pm-micro" style={{ margin: 0 }}>This report reflects one task and doesn’t decide a hiring outcome.</p>
+        <Link href="/reviewer" className="pm-btn pm-btn-secondary pm-no-print">See the reviewer’s view <ArrowRight size={16} aria-hidden="true" /></Link>
+      </aside>
+    </div>
     <EvidenceDialog item={activeEvidence} onClose={() => setActiveEvidence(null)} />
   </main>;
 }

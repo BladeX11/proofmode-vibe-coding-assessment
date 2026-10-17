@@ -52,7 +52,7 @@ export default function Assessment() {
     <header className="pm-ws-bar">
       <Link href="/" className="pm-ws-brand"><BrandMark small /><span>ProofMode</span><small>Assessment workspace</small></Link>
       <div className="pm-ws-meta">
-        <span className="pm-micro">Recorded: your prompts, code changes and test runs</span>
+        <span className="pm-micro">Prompts stay in this tab. Test runs save your code.</span>
         <span className="pm-ws-timer" role="timer" aria-label="Time remaining"><Clock3 size={15} aria-hidden="true" /> {clock}</span>
         <Link href="/orientation" className="pm-btn pm-btn-quiet">Exit task</Link>
       </div>
