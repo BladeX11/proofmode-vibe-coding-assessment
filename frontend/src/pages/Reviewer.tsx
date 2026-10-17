@@ -1,19 +1,29 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ArrowUpRight, Check, CircleHelp, CircleX, FileCheck2, MessageSquareText, UserRound, UsersRound } from "lucide-react";
-import { Eyebrow, EvidenceDialog, EvidenceLink, Panel, StatusBadge } from "@/components/proofmode/ui";
+import { ArrowLeft, ArrowUpRight, Check, CircleHelp, Printer, X } from "lucide-react";
+import { EvidenceDialog, EvidenceLink, Panel, StatusBadge } from "@/components/proofmode/ui";
 import { trpc } from "@/lib/trpc";
 import { useDemo, type EvidenceItem, type ExecutionResult } from "@/contexts/DemoContext";
 
-export default function Reviewer() {
-  const {
-    evidence,
-    note,
-    assessmentSession,
-    executionResult: localExecutionResult,
-    patch,
-  } = useDemo();
+type Verdict = { word: string; cls: "pass" | "fail" | "pending" | "neutral" | "na" };
+const EXECUTION_WORD = { passed: "Passed", failed: "Failed", timeout: "Timed out", error: "Execution error" } as const;
 
+function VerdictChip({ verdict }: { verdict: Verdict }) {
+  if (verdict.cls === "na") return <span className="pm-na"><CircleHelp size={13} aria-hidden="true" /> {verdict.word}</span>;
+  const Icon = verdict.cls === "pass" ? Check : verdict.cls === "fail" ? X : null;
+  return <span className={`pm-badge pm-badge-${verdict.cls}`}>{Icon && <Icon size={13} aria-hidden="true" />}{verdict.word}</span>;
+}
+
+function Finding({ title, verdict, body, caveat, evidence, onOpen }: { title: string; verdict: Verdict; body: string; caveat?: string; evidence?: EvidenceItem | null; onOpen: (item: EvidenceItem) => void }) {
+  return <article className="pm-finding">
+    <div className="pm-finding-name"><b>{title}</b><VerdictChip verdict={verdict} /></div>
+    <div style={{ display: "grid", gap: 6 }}><p className="pm-prose">{body}</p>{caveat && <p className="pm-micro">{caveat}</p>}</div>
+    {evidence ? <EvidenceLink item={evidence} onOpen={onOpen} compact /> : <span />}
+  </article>;
+}
+
+export default function Reviewer() {
+  const { evidence, note, assessmentSession, executionResult: localExecutionResult, patch } = useDemo();
   const [activeEvidence, setActiveEvidence] = useState<EvidenceItem | null>(null);
 
   const reportQuery = trpc.assessment.getSessionReport.useQuery(
@@ -64,138 +74,91 @@ export default function Reviewer() {
             ? "The candidate applied the suggested patch in the current demo session."
             : "A suggested patch is awaiting the candidate's review.",
       };
-  return <main className="app-page page-shell reviewer-page">
-    <div className="reviewer-utility"><Link href="/results" className="back-link"><ArrowLeft size={15} /> Candidate report</Link><div><StatusBadge tone="cyan">EVIDENCE REVIEW</StatusBadge><span className="report-ref">REPORT / PM—014—A</span></div></div>
-    {reportQuery.data && <p className="report-source" role="status">Reviewer data loaded from saved session · {reportQuery.data.session.status}</p>}
-    {assessmentSession && reportQuery.isError && <p className="report-load-error" role="alert">The saved report could not be loaded. Any displayed local data is from this browser session.</p>}
-    <header className="reviewer-header"><div><Eyebrow color="cyan">PROOFMODE / REVIEWER BRIEF</Eyebrow><h1>Evidence, in context.</h1><p>A focused view of one task, with every signal linked to its source.</p></div><button className="export-button" onClick={() => window.print()} type="button"><FileCheck2 size={15} /> Print summary</button></header>
-    <div className="reviewer-note"><span className="reviewer-note-icon"><UserRound size={17} /></span><p><strong>Evidence from this task only. Human review required.</strong><br/>This report is not a hiring decision or candidate ranking. Interpret findings alongside other relevant information.</p></div>
-    <div className="report-summary"><Panel className="candidate-card"><div className="candidate-avatar">A</div><div><Eyebrow>CANDIDATE / DEMO PROFILE</Eyebrow><h2>Alex Morgan</h2><p>TypeScript · Coding task TS-014</p></div><span className="candidate-date">15 OCT 2026</span></Panel><Panel className="task-outcome-card"><div><Eyebrow>TASK OUTCOME</Eyebrow><h2 className={execution?.status === "passed" ? "outcome-pass" : "outcome-seeded"}>{execution ? `${execution.passed} / ${execution.total} passed` : reportQuery.isLoading ? "Loading saved report" : "No execution recorded"}</h2><p>formatDuration · predefined sandbox checks</p></div><span className={`outcome-icon ${
-        execution?.status === "passed"
-          ? "outcome-icon-pass"
-          : execution
-            ? "outcome-icon-fail"
-            : "outcome-icon-pending"
-      }`}>
-        {execution?.status === "passed"
-          ? <Check size={19} />
-          : execution
-            ? <CircleX size={19} />
-            : <CircleHelp size={19} />}
-      </span></Panel></div>
-    <section className="report-section correctness-section">
-      <div className="report-section-title">
-        <span className="report-section-index">01</span>
-        <div><Eyebrow>OUTPUT QUALITY</Eyebrow><h2>Code correctness</h2></div>
-        <span className="report-section-caption">THE RESULT</span>
+
+  const executionVerdict: Verdict = execution
+    ? { word: EXECUTION_WORD[execution.status], cls: execution.status === "passed" ? "pass" : "fail" }
+    : { word: "Not observed", cls: "na" };
+  const patchVerdict: Verdict = patch === "rejected" ? { word: "Rejected", cls: "neutral" }
+    : patch === "applied" ? { word: "Applied", cls: "neutral" }
+    : patch === "pending" ? { word: "Pending review", cls: "pending" }
+    : { word: "Not observed", cls: "na" };
+
+  return <main className="pm-page">
+    <div className="pm-topline pm-no-print">
+      <Link href="/results" className="pm-back"><ArrowLeft size={15} aria-hidden="true" /> Candidate report</Link>
+      <StatusBadge tone="muted">Reviewer view</StatusBadge>
+    </div>
+    {reportQuery.data && <p className="pm-micro" role="status">Loaded from the saved session ({reportQuery.data.session.status}).</p>}
+    {assessmentSession && reportQuery.isError && <p className="pm-ws-error" role="alert">The saved report could not be loaded. Anything shown here comes from this browser session.</p>}
+    <header className="pm-pagehead" style={{ gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "end" }}>
+      <div style={{ display: "grid", gap: "var(--pm-s3)" }}>
+        <span className="pm-label">Reviewer report · Task TS-014</span>
+        <h1 className="pm-h1">What this session shows</h1>
+        <p className="pm-prose pm-muted">One task, with each finding tied to the record behind it.</p>
       </div>
-      <div className="report-findings">
-        <article className="report-finding">
-          <div className="finding-score">
-            <span className={`score-dot ${execution?.status === "passed" ? "green" : "muted"}`} />
-            <div>
-              <b>Boundary checks</b>
-              <small>Outcome · {execution
-                ? execution.status === "passed" ? "Passed"
-                  : execution.status === "failed" ? "Failed"
-                  : execution.status === "timeout" ? "Timed out" : "Execution error"
-                : "Not observed"}</small>
-            </div>
-          </div>
-          <div className="finding-description">
-            <p>{execution
-              ? `The sandbox recorded ${execution.passed} passing result(s) out of ${execution.total} predefined checks in ${execution.durationMs} ms. ${execution.status === "passed" ? "All recorded checks passed." : "The implementation needs review against the failed or incomplete checks."}`
-              : "No verified execution result is available for this report."}</p>
-            <span className="confidence">
-              {execution
-                ? "Runner evidence · These system-provided checks do not establish who authored the tests."
-                : "No verified execution evidence"}
-            </span>
-          </div>
-          {testEvidence && <EvidenceLink item={testEvidence} onOpen={setActiveEvidence} compact />}
-        </article>
-      </div>
+      <button className="pm-btn pm-btn-secondary pm-no-print" onClick={() => window.print()} type="button"><Printer size={16} aria-hidden="true" /> Print summary</button>
+    </header>
+    <div className="pm-notice">
+      <strong>Evidence from this task only. Human review required.</strong>
+      <p className="pm-muted">This is not a hiring decision or a ranking. Read it alongside everything else you know about the candidate.</p>
+    </div>
+    <div className="pm-summary">
+      <Panel className="pm-stat"><span className="pm-label">Sample candidate (not a real person)</span><h2>Alex Morgan</h2><p className="pm-muted">TypeScript · Task TS-014</p></Panel>
+      <Panel className="pm-stat"><span className="pm-label">Task outcome</span><h2 style={{ color: execution?.status === "passed" ? "var(--pm-pass)" : undefined }}>{execution ? `${execution.passed} of ${execution.total} checks passed` : reportQuery.isLoading ? "Loading saved report" : "No execution recorded"}</h2><p className="pm-muted">formatDuration · fixed sandbox checks</p></Panel>
+    </div>
+
+    <section className="pm-section" aria-labelledby="sec-correctness">
+      <div className="pm-section-title"><span className="pm-micro">01</span><h2 className="pm-h2" id="sec-correctness">Code correctness</h2><span className="pm-micro">The result</span></div>
+      <Finding title="Boundary checks" verdict={executionVerdict} onOpen={setActiveEvidence} evidence={testEvidence}
+        body={!execution
+          ? "No verified execution result is available for this report."
+          : execution.status === "error" || execution.status === "timeout"
+            ? `The sandbox run did not finish (${EXECUTION_WORD[execution.status].toLowerCase()}), so no checks were verified. This says nothing about the candidate’s code.`
+            : `The sandbox recorded ${execution.passed} passing result(s) out of ${execution.total} fixed checks in ${execution.durationMs} ms. ${execution.status === "passed" ? "All recorded checks passed." : "The implementation needs a closer look at the failed checks."}`}
+        caveat={execution ? "These checks are provided by the system. They do not show who wrote the tests." : undefined} />
     </section>
-    <section className="report-section process-section">
-      <div className="report-section-title">
-        <span className="report-section-index cyan-index">02</span>
-        <div><Eyebrow color="cyan">DECISION QUALITY</Eyebrow><h2>Process signals</h2></div>
-        <span className="report-section-caption">WHAT WAS OBSERVED</span>
-      </div>
-      <div className="report-findings">
-        <article className="report-finding">
-          <div className="finding-score">
-            <span className={`score-dot ${patch === "idle" ? "muted" : "cyan"}`} />
-            <div>
-              <b>Patch review</b>
-              <small>Signal · {patch === "rejected" ? "Rejected" : patch === "applied" ? "Applied" : patch === "pending" ? "Pending review" : "Not observed"}</small>
-            </div>
-          </div>
-          <div className="finding-description">
-            <p>{patch === "rejected"
-              ? "A patch rejection is recorded in the current demo session; decision quality is not inferred from the action alone."
-              : patch === "applied"
-                ? "A patch application is recorded in the current demo session; correctness must be judged from execution evidence."
-                : patch === "pending"
-                  ? "A patch suggestion is awaiting review. No final review decision is recorded."
-                  : "No patch review decision is recorded for this session."}</p>
-          </div>
-          {patchEvidence && <EvidenceLink item={patchEvidence} onOpen={setActiveEvidence} compact />}
-        </article>
-        <article className="report-finding">
-          <div className="finding-score">
-            <span className={`score-dot ${execution ? "cyan" : "muted"}`} />
-            <div>
-              <b>Execution verification</b>
-              <small>Signal · {execution ? "Observed" : "Not observed"}</small>
-            </div>
-          </div>
-          <div className="finding-description">
-            <p>{execution
-              ? `A sandbox run is recorded with ${execution.passed}/${execution.total} predefined checks passing. This does not establish that the candidate selected those test inputs.`
-              : "No persisted execution run is available to inspect."}</p>
-          </div>
-          {testEvidence && <EvidenceLink item={testEvidence} onOpen={setActiveEvidence} compact />}
-        </article>
-        <article className="report-finding not-observed-finding">
-          <div className="finding-score">
-            <span className="score-dot muted" />
-            <div><b>Team collaboration</b><small>Skill band · Not observed</small></div>
-          </div>
-          <div className="finding-description">
-            <p>This individual task provided no fair opportunity to observe collaboration. No inference is made.</p>
-          </div>
-          <span className="not-observed-value">NOT OBSERVED</span>
-        </article>
-      </div>
+
+    <section className="pm-section" aria-labelledby="sec-process">
+      <div className="pm-section-title"><span className="pm-micro">02</span><h2 className="pm-h2" id="sec-process">Process signals</h2><span className="pm-micro">What was observed</span></div>
+      <Finding title="Patch review" verdict={patchVerdict} onOpen={setActiveEvidence} evidence={patchEvidence}
+        body={patch === "rejected"
+          ? "The candidate rejected the suggested patch. The action alone does not say how well they judged it."
+          : patch === "applied"
+            ? "The candidate applied the suggested patch. Whether that was sound shows in the test results, not in the action."
+            : patch === "pending"
+              ? "A suggestion is waiting for the candidate’s decision. No review outcome is recorded."
+              : "No patch review decision is recorded for this session."} />
+      <Finding title="Execution verification" verdict={execution ? { word: "Observed", cls: "neutral" } : { word: "Not observed", cls: "na" }} onOpen={setActiveEvidence} evidence={testEvidence}
+        body={!execution
+          ? "No saved test run is available to inspect."
+          : execution.status === "error" || execution.status === "timeout"
+            ? "A sandbox run was attempted but did not finish, so there is no result to inspect."
+            : `A sandbox run is recorded with ${execution.passed} of ${execution.total} fixed checks passing. This does not show that the candidate chose those test inputs.`} />
+      <Finding title="Team collaboration" verdict={{ word: "Not observed", cls: "na" }} onOpen={setActiveEvidence}
+        body="This is a solo task, so it gave no fair chance to observe collaboration. Nothing is inferred." />
     </section>
-    <div className="reviewer-bottom-grid">
-      <Panel className="strengths-panel">
-        <div className="reviewer-card-heading"><UsersRound size={16} /><Eyebrow color="green">RECORDED SIGNALS</Eyebrow></div>
-        <ul>
-          <li><Check size={13} /> {execution
-            ? `Sandbox execution recorded: ${execution.passed}/${execution.total} predefined checks passed.`
-            : "No verified sandbox execution is currently available."}</li>
-          <li><Check size={13} /> {patch === "rejected"
-            ? "Patch rejection recorded in this demo session."
-            : patch === "applied"
-              ? "Patch application recorded in this demo session."
-              : patch === "pending"
-                ? "Patch suggestion remains awaiting review."
-                : "No patch review decision recorded."}</li>
+
+    <div className="pm-two">
+      <Panel>
+        <h2 className="pm-h3">Recorded signals</h2>
+        <ul className="pm-list" style={{ marginTop: "var(--pm-s3)" }}>
+          <li>{execution ? `Sandbox run recorded: ${execution.passed} of ${execution.total} fixed checks passed.` : "No verified sandbox run is available."}</li>
+          <li>{patch === "rejected" ? "Patch rejection recorded." : patch === "applied" ? "Patch application recorded." : patch === "pending" ? "A patch suggestion is still waiting for review." : "No patch review decision recorded."}</li>
         </ul>
       </Panel>
-      <Panel className="questions-panel">
-        <div className="reviewer-card-heading"><MessageSquareText size={16} /><Eyebrow color="magenta">SUGGESTED FOLLOW-UP</Eyebrow></div>
-        <ol>
+      <Panel>
+        <h2 className="pm-h3">Questions you could ask</h2>
+        <p className="pm-micro" style={{ margin: "var(--pm-s1) 0 var(--pm-s3)" }}>Written for this sample task. They are not generated from the session.</p>
+        <ol className="pm-list">
           <li>How would you extend this helper for hours and days?</li>
           <li>What would you change if the input could be fractional?</li>
           <li>How do you decide when an AI suggestion is worth keeping?</li>
         </ol>
       </Panel>
     </div>
-    {note.trim() && <Panel className="candidate-context-report"><div><Eyebrow>CANDIDATE CONTEXT NOTE</Eyebrow><span>Shared separately from assessed findings</span></div><p>{note}</p></Panel>}
-    <footer className="reviewer-footer"><span>PROOFMODE / EVIDENCE REPORT · TASK TS-014</span><Link href="/assessment" className="text-link">Return to demo <ArrowUpRight size={14} /></Link></footer>
+
+    {note.trim() && <Panel><span className="pm-label">Candidate’s own note · shared separately from the findings</span><p className="pm-prose" style={{ margin: "var(--pm-s2) 0 0" }}>{note}</p></Panel>}
+    <div className="pm-foot pm-no-print"><span className="pm-micro">ProofMode evidence report · Task TS-014 · Hackathon prototype, not a hiring decision system</span><Link href="/assessment" className="pm-btn pm-btn-quiet">Return to the demo <ArrowUpRight size={15} aria-hidden="true" /></Link></div>
     <EvidenceDialog item={activeEvidence} onClose={() => setActiveEvidence(null)} />
   </main>;
 }
