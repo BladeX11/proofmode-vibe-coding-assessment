@@ -1,30 +1,48 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { ArrowUpRight, Check, X } from "lucide-react";
+import { ArrowUpRight, Check, CircleDot, X } from "lucide-react";
 import type { EvidenceItem } from "@/contexts/DemoContext";
 
+type Variant = "primary" | "secondary" | "quiet";
+type Tone = "green" | "cyan" | "magenta" | "red" | "muted";
+
+// Legacy tone names map onto verdict meaning: green=pass, red=fail, magenta=pending, the rest neutral.
+const BADGE: Record<Tone, { cls: string; icon: typeof Check | null }> = {
+  green: { cls: "pm-badge-pass", icon: Check },
+  red: { cls: "pm-badge-fail", icon: X },
+  magenta: { cls: "pm-badge-pending", icon: CircleDot },
+  cyan: { cls: "pm-badge-neutral", icon: null },
+  muted: { cls: "pm-badge-neutral", icon: null },
+};
+
 export function BrandMark({ small = false }: { small?: boolean }) {
-  return <span className={`brand-mark${small ? " brand-mark-small" : ""}`} aria-hidden="true"><b>⟨</b><i>•</i><b>⟩</b></span>;
+  const size = small ? 22 : 28;
+  return <svg className="pm-brand-mark" width={size} height={size} viewBox="0 0 28 28" aria-hidden="true">
+    <rect width="28" height="28" rx="6" fill="var(--pm-ink)" />
+    <path d="M7.5 14.5l4.2 4.2 8.8-9.4" fill="none" stroke="var(--pm-paper)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="7" y="21.2" width="14" height="2.4" rx="1.2" fill="var(--pm-mark)" />
+  </svg>;
 }
-export function ButtonLink({ href, children, variant = "primary", className = "" }: { href: string; children: React.ReactNode; variant?: "primary" | "secondary" | "quiet"; className?: string }) {
-  return <a className={`button button-${variant} ${className}`} href={href}>{children}</a>;
+export function ButtonLink({ href, children, variant = "primary", className = "" }: { href: string; children: React.ReactNode; variant?: Variant; className?: string }) {
+  return <a className={`pm-btn pm-btn-${variant} ${className}`} href={href}>{children}</a>;
 }
-export function ActionButton({ children, onClick, variant = "primary", disabled = false, className = "", type = "button" }: { children: React.ReactNode; onClick: () => void; variant?: "primary" | "secondary" | "quiet"; disabled?: boolean; className?: string; type?: "button" | "submit" }) {
-  return <button className={`button button-${variant} ${className}`} type={type} onClick={onClick} disabled={disabled}>{children}</button>;
+export function ActionButton({ children, onClick, variant = "primary", disabled = false, className = "", type = "button" }: { children: React.ReactNode; onClick: () => void; variant?: Variant; disabled?: boolean; className?: string; type?: "button" | "submit" }) {
+  return <button className={`pm-btn pm-btn-${variant} ${className}`} type={type} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 export function Panel({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
-  return <section id={id} className={`panel ${className}`}>{children}</section>;
+  return <section id={id} className={`pm-card ${className}`}>{children}</section>;
 }
-export function Eyebrow({ children, color = "green" }: { children: React.ReactNode; color?: "green" | "cyan" | "magenta" | "red" }) {
-  return <span className={`eyebrow eyebrow-${color}`}>{children}</span>;
+export function Eyebrow({ children }: { children: React.ReactNode; color?: "green" | "cyan" | "magenta" | "red" }) {
+  return <span className="pm-label">{children}</span>;
 }
-export function StatusBadge({ children, tone = "green" }: { children: React.ReactNode; tone?: "green" | "cyan" | "magenta" | "red" | "muted" }) {
-  return <span className={`status-badge status-${tone}`}><span className="status-dot" aria-hidden="true" />{children}</span>;
+export function StatusBadge({ children, tone = "green" }: { children: React.ReactNode; tone?: Tone }) {
+  const { cls, icon: Icon } = BADGE[tone];
+  return <span className={`pm-badge ${cls}`}>{Icon && <Icon size={13} aria-hidden="true" />}{children}</span>;
 }
 export function SectionHeading({ label, title, description, tone = "green" }: { label: string; title: string; description?: string; tone?: "green" | "cyan" | "magenta" }) {
-  return <div className="section-heading"><Eyebrow color={tone}>{label}</Eyebrow><h2>{title}</h2>{description && <p>{description}</p>}</div>;
+  return <div className="section-heading"><Eyebrow color={tone}>{label}</Eyebrow><h2 className="pm-h2">{title}</h2>{description && <p className="pm-prose pm-muted">{description}</p>}</div>;
 }
 export function EvidenceLink({ item, onOpen, compact = false }: { item: EvidenceItem; onOpen: (item: EvidenceItem) => void; compact?: boolean }) {
-  return <button className={`evidence-link${compact ? " evidence-link-compact" : ""}`} onClick={() => onOpen(item)} type="button"><span className="evidence-id">{item.id}</span><span>{compact ? "View evidence" : item.title}</span><ArrowUpRight size={14} aria-hidden="true" /></button>;
+  return <button className="pm-evlink" onClick={() => onOpen(item)} type="button"><span className="pm-evref">{item.id}</span><span>{compact ? "View evidence" : item.title}</span><ArrowUpRight size={14} aria-hidden="true" /></button>;
 }
 export function EvidenceDialog({ item, onClose }: { item: EvidenceItem | null; onClose: () => void }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -55,11 +73,15 @@ export function EvidenceDialog({ item, onClose }: { item: EvidenceItem | null; o
       first.focus();
     }
   };
-  return <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="evidence-dialog" role="dialog" aria-modal="true" aria-labelledby="evidence-title" tabIndex={-1} ref={dialogRef} onKeyDown={containTab}>
-      <div className="dialog-top"><Eyebrow color="cyan">Evidence record / {item.id}</Eyebrow><button className="icon-button" onClick={onClose} aria-label="Close evidence"><X size={18} /></button></div>
-      <h2 id="evidence-title">{item.title}</h2><p className="dialog-detail">{item.detail}</p>
-      <div className="dialog-source"><Check size={15} /> Linked to this task’s recorded evidence</div>
+  return <div className="pm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="pm-dialog" role="dialog" aria-modal="true" aria-labelledby="evidence-title" tabIndex={-1} ref={dialogRef} onKeyDown={containTab}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <span className="pm-label">Evidence record <span className="pm-evref">{item.id}</span></span>
+        <button className="pm-btn pm-btn-quiet pm-btn-icon" onClick={onClose} aria-label="Close evidence" type="button"><X size={18} aria-hidden="true" /></button>
+      </div>
+      <h2 id="evidence-title" className="pm-h3">{item.title}</h2>
+      <p className="pm-prose" style={{ margin: 0 }}><span className="pm-mark">{item.detail}</span></p>
+      <p className="pm-micro" style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}><Check size={14} aria-hidden="true" /> Linked to this task’s recorded evidence</p>
       <ActionButton onClick={onClose} variant="secondary">Close evidence</ActionButton>
     </div>
   </div>;

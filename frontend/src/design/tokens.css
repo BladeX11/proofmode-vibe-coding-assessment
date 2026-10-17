@@ -1,0 +1,80 @@
+/* ProofMode design tokens. "Case file": warm paper, ink, and marked evidence.
+   Contrast ratios are against --paper or the stated surface (WCAG AA >= 4.5:1 for text, >= 3:1 for UI edges). */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --pm-paper: #F5F1E8;
+  --pm-card: #FBF9F4;
+  --pm-sunken: #EDE7D9;
+  --pm-code-bg: #23211B;
+
+  /* Text (on paper) */
+  --pm-ink: #1D1B16;          /* 15.26:1 */
+  --pm-muted: #5E594D;        /* 6.19:1 */
+  --pm-code-text: #E9E4D6;    /* 12.67:1 on code bg */
+  --pm-code-muted: #A39D8C;   /* 5.95:1 on code bg */
+
+  /* Edges. --pm-line is decorative only; controls use --pm-line-strong (3.14:1). */
+  --pm-line: #D9D2C1;
+  --pm-line-strong: #8F8873;
+
+  /* Verdicts. Always pair with an icon or word, never colour alone. */
+  --pm-pass: #17624F;         /* 6.43:1 */
+  --pm-pass-soft: #E4EEE8;    /* text on it 6.11:1 */
+  --pm-fail: #B23A1B;         /* 5.30:1 */
+  --pm-fail-soft: #F7E4DD;    /* text on it 4.87:1 */
+  --pm-pending: #7A5800;      /* 5.78:1 */
+  --pm-pending-soft: #F4EAD0; /* text on it 5.44:1 */
+  --pm-na: #6A675E;           /* 5.02:1. "Not observed": dashed edge, no fill, never a zero. */
+  --pm-code-pass: #7CC7A8;    /* 8.12:1 on code bg */
+  --pm-code-fail: #F0997A;    /* 7.31:1 on code bg */
+
+  /* Evidence highlighter: marks the text an EV reference points at. */
+  --pm-mark: #F2D45C;
+  --pm-mark-soft: #F8EDB8;    /* ink on it 14.58:1 */
+
+  /* Type */
+  --pm-font-serif: "Literata Variable", Georgia, "Times New Roman", serif;
+  --pm-font-sans: "Schibsted Grotesk Variable", "Segoe UI", system-ui, sans-serif;
+  --pm-font-mono: "Commit Mono", Consolas, "Liberation Mono", monospace;
+  --pm-text-display: 600 clamp(2.25rem, 4.2vw + 0.8rem, 3.5rem)/1.08 var(--pm-font-serif);
+  --pm-text-h1: 600 clamp(1.85rem, 2.4vw + 1rem, 2.5rem)/1.15 var(--pm-font-serif);
+  --pm-text-h2: 600 1.625rem/1.25 var(--pm-font-serif);
+  --pm-text-h3: 600 1.25rem/1.3 var(--pm-font-serif);
+  --pm-text-body: 400 1rem/1.55 var(--pm-font-sans);
+  --pm-text-small: 400 0.875rem/1.45 var(--pm-font-sans);
+  --pm-text-label: 600 0.8125rem/1.2 var(--pm-font-sans);
+  --pm-text-code: 400 0.875rem/1.6 var(--pm-font-mono);
+  --pm-text-micro: 500 0.75rem/1.2 var(--pm-font-mono);
+
+  /* Space (4px base) */
+  --pm-s1: 4px; --pm-s2: 8px; --pm-s3: 12px; --pm-s4: 16px; --pm-s5: 24px; --pm-s6: 32px; --pm-s7: 48px; --pm-s8: 72px;
+
+  /* Shape. Flat: hairlines do the work, no blur shadows. */
+  --pm-radius-sm: 4px;
+  --pm-radius: 6px;
+  --pm-radius-lg: 10px;
+  --pm-hit: 44px;             /* minimum touch target */
+  --pm-measure: 64ch;
+  --pm-page: 1120px;
+
+  /* Motion. Reduced-motion rule lives in base.css. */
+  --pm-ease: cubic-bezier(0.2, 0, 0, 1);
+  --pm-dur-fast: 120ms;
+  --pm-dur: 200ms;
+}
+
+@theme inline {
+  --color-paper: var(--pm-paper);
+  --color-card: var(--pm-card);
+  --color-ink: var(--pm-ink);
+  --color-muted: var(--pm-muted);
+  --color-pass: var(--pm-pass);
+  --color-fail: var(--pm-fail);
+  --color-pending: var(--pm-pending);
+  --color-mark: var(--pm-mark);
+  --font-serif: var(--pm-font-serif);
+  --font-sans: var(--pm-font-sans);
+  --font-mono: var(--pm-font-mono);
+}
