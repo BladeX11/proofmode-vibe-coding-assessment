@@ -90,7 +90,7 @@ export default function Reviewer() {
     </div>
     {reportQuery.data && <p className="pm-micro" role="status">Loaded from the saved session ({reportQuery.data.session.status}).</p>}
     {assessmentSession && reportQuery.isError && <p className="pm-ws-error" role="alert">The saved report could not be loaded. Anything shown here comes from this browser session.</p>}
-    <header className="pm-pagehead" style={{ gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "end" }}>
+    <header className="pm-pagehead pm-headrow">
       <div style={{ display: "grid", gap: "var(--pm-s3)" }}>
         <span className="pm-label">Reviewer report · Task TS-014</span>
         <h1 className="pm-h1">What this session shows</h1>

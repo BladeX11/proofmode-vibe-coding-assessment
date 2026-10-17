@@ -21,6 +21,8 @@
 .pm-back:hover { text-decoration-color: var(--pm-ink); }
 .pm-pagehead { display: grid; gap: var(--pm-s3); }
 .pm-pagehead p { margin: 0; }
+.pm-headrow { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+@media (max-width: 760px) { .pm-headrow { grid-template-columns: minmax(0, 1fr); } .pm-headrow > .pm-btn { justify-self: start; } }
 
 /* ---- Patch review ---- */
 .pm-review-explain { display: grid; gap: var(--pm-s2); padding: var(--pm-s4) var(--pm-s5); background: var(--pm-card); border: 1px solid var(--pm-line); border-left: 3px solid var(--pm-ink); border-radius: 0 var(--pm-radius-lg) var(--pm-radius-lg) 0; }
